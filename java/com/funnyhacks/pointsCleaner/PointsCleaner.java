@@ -15,6 +15,13 @@ public class PointsCleaner {
     private float lastValue; // Last accepted value.
     private float newValue; // New value to be accepted or ignored.
 
+    private boolean autoCenter; // Automatically center the input soon after starting.
+    private int autoCenterPosition; // How many positions into the data to perform the center calibration.
+    private float center; // The value to shift all input data by.
+    private float autoCenterMax; // The maxiumum end of the total range. The full range is assumed to be symmetrical around 0.
+    private float autoCenterMin; // Derived: The counterpart to autoCenterMax.
+    private float autoCenterRange; // Derived: autoCenterMax * 2.
+
     public PointsCleaner(int deltas) { // tunable: Use howManyDeltas to change the length of the window. Shorter makes it more reactive. Longer makes it more steady.
 
         // Set the number of deltas
@@ -46,6 +53,11 @@ public class PointsCleaner {
         lastValue = 0; // Last accepted value.
         newValue = 0; // New value to be accepted or ignored.
 
+
+        autoCenter = false;
+        autoCenterPosition = 3;
+        center = 0;
+        autoCenterMax = 1;
     }
 
     public void setThreshold1(float threshold1) { // Filter1: How much the value must change before it will be considered a change.
@@ -69,6 +81,14 @@ public class PointsCleaner {
     }
 
 
+    public void setAutoCenter(int offset, float max) {
+        autoCenter = true;
+        autoCenterPosition = offset;
+        autoCenterMax = max;
+        autoCenterMin = max * -1;
+        autoCenterRange = max * 2;
+    }
+
     // protected float basicLowPassFilter(float lastSavedValue, float currentValue, float threshold) {
     //     float delta=currentValue-lastSavedValue;
     //     if (Math.abs(delta) > threshold) {
@@ -79,7 +99,43 @@ public class PointsCleaner {
     //     }
     // }
 
-    public float processPoint(float newValue) {
+    public float processAutoCenter (newValue) {
+        if (autoCenterPosition == -1) { // 3: Normal flow
+            float output=newValue+center;
+
+            // Fix any range issues.
+            if (output > autoCenterMax) {
+                output = output - autoCenterRange;
+            }
+            else {
+                if (output < autoCenterMin) {
+                    output = output + autoCenterRange;
+                }
+            }
+
+            return output;
+        }
+        else {
+            if (autoCenterPosition > 0) { // 1: Lead up
+                autoCenterPosition --;
+            }
+            else { // 2: Calibration
+                autoCenterPosition = -1;
+                center = newValue*-1;
+            }
+        }
+
+        return 0;
+    }
+
+    public float processPoint(float inputValue) {
+        if (autoCenter) {
+            float newValue = processAutoCenter(inputValue);
+        }
+        else {
+            float newValue = inputValue;
+        }
+
         float delta=newValue-lastValue;
 
         // Is the change big enough that we just let it through
