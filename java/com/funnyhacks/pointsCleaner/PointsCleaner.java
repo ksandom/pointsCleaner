@@ -99,7 +99,7 @@ public class PointsCleaner {
     //     }
     // }
 
-    public float processAutoCenter (newValue) {
+    public float processAutoCenter (float newValue) {
         if (autoCenterPosition == -1) { // 3: Normal flow
             float output=newValue+center;
 
